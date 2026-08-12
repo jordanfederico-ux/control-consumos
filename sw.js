@@ -1,4 +1,4 @@
-const CACHE="control-consumos-v4-1";
+const CACHE="control-consumos-v4-2";
 const ASSETS=["./","./index.html","./styles.css","./app.js","./manifest.webmanifest"];
 
 self.addEventListener("install",event=>{

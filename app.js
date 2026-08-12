@@ -1,13 +1,14 @@
-const APP_VERSION="4.1";
+const APP_VERSION="4.2";
 const LEGACY_KEY="cc_v1";
 const GLOBAL_KEY="cc_v4_global";
+const FIXED_CLIENT_ID="1008229627670-snds8nh12cesb8htda7s38oi73uck9qj.apps.googleusercontent.com";
 const SESSION_KEY="cc_v41_session";
 
 const defaults={
   initial:50000,sender:"",subject:"",clientId:"",
   movements:[],processedIds:[],trackingStart:null,
   alertThreshold:10000,lastAlertMovementId:null,lastSyncAt:null,
-  autoSync:true,faceIdEnabled:false,faceCredentialId:null,schemaVersion:4.1
+  autoSync:true,faceIdEnabled:false,faceCredentialId:null,schemaVersion:4.2
 };
 
 let currentEmail=null,accessToken=null,accessTokenExpiresAt=0,tokenClient=null,syncing=false;
@@ -16,17 +17,8 @@ let state={...defaults};
 const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat("es-UY",{style:"currency",currency:"UYU",minimumFractionDigits:2}).format(Number(n)||0);
 
-function globalConfig(){
-  const g=JSON.parse(localStorage.getItem(GLOBAL_KEY)||"{}");
-  if(!g.clientId){
-    try{
-      const legacy=JSON.parse(localStorage.getItem(LEGACY_KEY)||"{}");
-      if(legacy.clientId) g.clientId=legacy.clientId;
-    }catch(e){}
-  }
-  return g;
-}
-function saveGlobalClientId(clientId){localStorage.setItem(GLOBAL_KEY,JSON.stringify({clientId}))}
+function globalConfig(){return {clientId:FIXED_CLIENT_ID}}
+function saveGlobalClientId(clientId){}))}
 function userKey(email){return `cc_v4_user_${String(email).toLowerCase()}`}
 function loadUserState(email){
   const key=userKey(email),existing=localStorage.getItem(key);
@@ -35,9 +27,9 @@ function loadUserState(email){
   }else{
     let migrated={};
     try{migrated=JSON.parse(localStorage.getItem(LEGACY_KEY)||"{}")}catch(e){}
-    state={...defaults,...migrated,schemaVersion:4.1};
+    state={...defaults,...migrated,schemaVersion:4.2};
     const g=globalConfig();
-    if(g.clientId) state.clientId=g.clientId;
+    state.clientId=FIXED_CLIENT_ID;
     localStorage.setItem(key,JSON.stringify(state));
   }
   if(!Array.isArray(state.movements)) state.movements=[];
@@ -45,7 +37,7 @@ function loadUserState(email){
   if(typeof state.autoSync!=="boolean") state.autoSync=true;
   if(typeof state.faceIdEnabled!=="boolean") state.faceIdEnabled=false;
   if(!("faceCredentialId" in state)) state.faceCredentialId=null;
-  state.schemaVersion=4.1;
+  state.schemaVersion=4.2;
 }
 
 function saveSession(email){
@@ -197,8 +189,7 @@ function openSettings(){
   $("initialInput").value=state.initial;
   $("senderInput").value=state.sender;
   $("subjectInput").value=state.subject;
-  $("clientIdInput").value=state.clientId||globalConfig().clientId||"";
-  $("alertInput").value=state.alertThreshold;
+    $("alertInput").value=state.alertThreshold;
   $("autoSyncInput").checked=state.autoSync;
   $("faceIdInput").checked=state.faceIdEnabled;
   $("settings").showModal();
@@ -210,11 +201,11 @@ $("settingsForm").addEventListener("submit",async e=>{
   state.initial=Number($("initialInput").value)||0;
   state.sender=$("senderInput").value.trim();
   state.subject=$("subjectInput").value.trim();
-  state.clientId=$("clientIdInput").value.trim();
+  state.clientId=FIXED_CLIENT_ID;
   state.alertThreshold=Number($("alertInput").value)||0;
   state.autoSync=$("autoSyncInput").checked;
   const wantsFaceId=$("faceIdInput").checked;
-  state.schemaVersion=4.1;
+  state.schemaVersion=4.2;
 
   if(wantsFaceId && !state.faceIdEnabled){
     try{
@@ -243,7 +234,7 @@ $("resetTrackingBtn").onclick=e=>{
   state.movements=[];state.processedIds=[];
   state.trackingStart=Date.now();
   state.lastAlertMovementId=null;state.lastSyncAt=null;
-  state.schemaVersion=4.1;
+  state.schemaVersion=4.2;
   save();render();
   setStatus("Historial borrado. El seguimiento empieza desde ahora.");
   $("settings").close();
@@ -316,7 +307,7 @@ async function fetchCurrentGoogleUser(token){
   return data;
 }
 
-function getClientId(){return state.clientId||globalConfig().clientId||""}
+function getClientId(){return FIXED_CLIENT_ID}
 function initGoogle(){
   const clientId=getClientId();
   if(!clientId||!window.google?.accounts?.oauth2)return;
@@ -356,12 +347,7 @@ function initGoogle(){
 
 async function authorize({selectAccount=false}={}){
   const clientId=getClientId();
-  if(!clientId){
-    $("gateClientIdInput").value="";
-    $("clientDialog").showModal();
-    return;
-  }
-  initGoogle();
+    initGoogle();
   setGateStatus("Verificando cuenta…");
   tokenClient?.requestAccessToken({prompt:selectAccount?"select_account":""});
 }
@@ -372,18 +358,6 @@ $("switchUserBtn").onclick=()=>{
   showGate("Elegí otra cuenta de Google autorizada.");
   authorize({selectAccount:true});
 };
-$("gateSettingsBtn").onclick=()=>{
-  $("gateClientIdInput").value=globalConfig().clientId||"";
-  $("clientDialog").showModal();
-};
-$("clientForm").addEventListener("submit",e=>{
-  e.preventDefault();
-  const id=$("gateClientIdInput").value.trim();
-  if(id)saveGlobalClientId(id);
-  $("clientDialog").close();
-  setGateStatus("Client ID guardado. Ahora ingresá con Google.");
-  initGoogle();
-});
 
 async function getMessageIds(token,query){
   const ids=[];let pageToken=null,pages=0;
@@ -515,9 +489,7 @@ $("logoutFromLockBtn").onclick=()=>{
 window.addEventListener("load",()=>{
   if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(console.warn);
 
-  const g=globalConfig();
-  if(g.clientId)$("gateClientIdInput").value=g.clientId;
-
+  
   const savedEmail=loadSession();
   if(savedEmail){
     currentEmail=savedEmail;
