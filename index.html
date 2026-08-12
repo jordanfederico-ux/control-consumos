@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#17191f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
+  <title>Control de Consumos</title>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <div class="eyebrow">PERSONAL</div>
+        <h1>💳 Control de Consumos</h1>
+      </div>
+      <button id="settingsBtn" class="icon-btn" aria-label="Configuración">⚙️</button>
+    </header>
+
+    <section class="balance-card">
+      <div class="label">SALDO DISPONIBLE</div>
+      <div id="balance" class="balance">$ 0,00</div>
+      <div class="stats">
+        <div><span>Inicial</span><strong id="initial">$ 0,00</strong></div>
+        <div><span>Consumido</span><strong id="spent">$ 0,00</strong></div>
+      </div>
+      <button id="refreshBtn" class="primary">🔄 Buscar nuevos consumos</button>
+      <button id="demoBtn" class="secondary">Probar con datos de ejemplo</button>
+      <div id="status" class="status">Listo.</div>
+    </section>
+
+    <section class="history">
+      <div class="section-title">
+        <h2>Últimos consumos</h2>
+        <span id="count">0</span>
+      </div>
+      <div id="empty" class="empty">Todavía no hay consumos registrados.</div>
+      <div id="movements"></div>
+    </section>
+  </main>
+
+  <dialog id="settings">
+    <form method="dialog" id="settingsForm">
+      <h2>Configuración</h2>
+
+      <label>Saldo inicial (UYU)
+        <input id="initialInput" type="number" step="0.01" min="0" placeholder="50000">
+      </label>
+
+      <label>Remitente
+        <input id="senderInput" type="email" placeholder="avisos@banco.com">
+      </label>
+
+      <label>Texto del asunto (opcional)
+        <input id="subjectInput" type="text" placeholder="Aviso de consumo aprobado">
+      </label>
+
+      <label>Google OAuth Client ID
+        <input id="clientIdInput" type="text" placeholder="1234567890-xxxxx.apps.googleusercontent.com">
+        <small>Se configura una sola vez. No es tu contraseña de Gmail.</small>
+      </label>
+
+      <div class="dialog-actions">
+        <button value="cancel" class="secondary">Cancelar</button>
+        <button id="saveBtn" value="default" class="primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js"></script>
+</body>
+</html>

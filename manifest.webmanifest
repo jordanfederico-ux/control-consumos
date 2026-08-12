@@ -1,0 +1,10 @@
+{
+  "name": "Control de Consumos",
+  "short_name": "Consumos",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#101216",
+  "theme_color": "#17191f",
+  "lang": "es-UY",
+  "icons": []
+}
