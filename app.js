@@ -1,4 +1,4 @@
-const APP_VERSION="3.1";
+const APP_VERSION="3.2";
 const KEY="cc_v1";
 const defaults={
   initial:50000,
@@ -11,7 +11,8 @@ const defaults={
   alertThreshold:10000,
   lastAlertMovementId:null,
   lastSyncAt:null,
-  autoSync:true
+  autoSync:true,
+  schemaVersion:3.2
 };
 
 const saved=JSON.parse(localStorage.getItem(KEY)||"{}");
@@ -20,6 +21,21 @@ if(!Array.isArray(state.movements)) state.movements=[];
 if(!Array.isArray(state.processedIds)) state.processedIds=[];
 if(typeof state.autoSync!=="boolean") state.autoSync=true;
 if(!("lastSyncAt" in state)) state.lastSyncAt=null;
+
+// V3.2 migration:
+// Older versions may have imported historical emails before a tracking start existed.
+// Because that history is not trustworthy, clear it once when upgrading to 3.2.
+// Settings such as sender, subject, clientId, initial balance, alert threshold and auto-sync are preserved.
+if(Number(state.schemaVersion||0)<3.2){
+  state.movements=[];
+  state.processedIds=[];
+  state.trackingStart=null;
+  state.lastAlertMovementId=null;
+  state.lastSyncAt=null;
+  state.schemaVersion=3.2;
+  localStorage.setItem(KEY,JSON.stringify(state));
+}
+
 for(const m of state.movements){
   if(m.gmailId && !state.processedIds.includes(m.gmailId)) state.processedIds.push(m.gmailId);
 }
@@ -91,22 +107,32 @@ $("settingsForm").addEventListener("submit",e=>{
   state.clientId=$("clientIdInput").value.trim();
   state.alertThreshold=Number($("alertInput").value)||0;
   state.autoSync=$("autoSyncInput").checked;
+  state.schemaVersion=3.2;
 
   // For a brand-new install, saving config establishes the tracking start.
-  if(!state.trackingStart && state.movements.length===0) state.trackingStart=Date.now();
+  if(!state.trackingStart){
+    state.movements=[];
+    state.processedIds=[];
+    state.lastAlertMovementId=null;
+    state.lastSyncAt=null;
+    state.trackingStart=Date.now();
+  }
 
   save(); render(); initGoogle(); $("settings").close();
   setStatus("Configuración guardada.");
 });
 
-$("resetTrackingBtn").onclick=()=>{
-  if(!confirm("Esto borra el historial de la app y empieza a contar únicamente los mails que lleguen desde este momento. ¿Continuar?")) return;
+$("resetTrackingBtn").onclick=(e)=>{
+  e.preventDefault();
   state.movements=[];
   state.processedIds=[];
   state.trackingStart=Date.now();
   state.lastAlertMovementId=null;
-  save(); render();
-  setStatus("Listo. El seguimiento empieza desde ahora.");
+  state.lastSyncAt=null;
+  state.schemaVersion=3.2;
+  save();
+  render();
+  setStatus("Historial borrado. El seguimiento empieza desde ahora.");
   $("settings").close();
 };
 

@@ -1,44 +1,25 @@
-# Control de Consumos — V3.1
+# Control de Consumos — V3.2
 
-Esta versión conserva **todo lo de V3** y corrige el parser de importes.
+V3.2 conserva todo lo de V3.1 y corrige el problema de historial anterior.
 
-## Cambios de V3.1
+## Cambios
 
-### 1. Solo consumos en UYU
-La app ahora agrega un movimiento únicamente cuando el importe del mail está seguido explícitamente por `UYU`.
+- Al actualizar desde una versión anterior, V3.2 limpia **una sola vez** el historial viejo/importado.
+- Conserva la configuración: remitente, asunto, Client ID, saldo inicial, alerta y auto-sync.
+- Al guardar configuración por primera vez después de la limpieza, fija el inicio del seguimiento en ese instante.
+- El botón **“Borrar historial y empezar desde ahora”** ya no depende de un `confirm()` del navegador:
+  borra directamente el historial y reinicia el seguimiento.
+- Sigue evitando duplicados por Gmail ID.
+- Mantiene auto-sync al abrir, botón manual, última actualización, alertas, notificaciones y filtro UYU-only.
+- Mantiene la corrección de importes como `4071.0 UYU` → `4071,00`.
 
-Ejemplos:
-- `Importe: 4071.0 UYU` ✅
-- `Importe: 4.071,50 UYU` ✅
-- `Importe: 120 USD` ❌ se ignora
-- cualquier otra moneda ❌ se ignora
+## Actualización
 
-### 2. Corrección de separadores
-El parser distingue entre decimal y miles:
-
-- `4071.0 UYU` → `4071,00 UYU`
-- `4071.00 UYU` → `4071,00 UYU`
-- `4.071 UYU` → `4071,00 UYU`
-- `4.071,50 UYU` → `4071,50 UYU`
-- `4071,5 UYU` → `4071,50 UYU`
-
-## Mantiene todo lo anterior
-- Sincronización automática al abrir.
-- Botón manual de actualización.
-- Última actualización.
-- Prevención persistente de duplicados por Gmail ID.
-- “Borrar historial y empezar desde ahora”.
-- Alertas de saldo bajo.
-- Notificaciones PWA.
-- Filtro por remitente y asunto.
-- Extracción del comercio.
-- Configuración guardada localmente.
-
-## Actualizar GitHub
 Reemplazá los archivos actuales por los de este ZIP y ejecutá:
 
 git add .
-git commit -m "Version 3.1 - UYU y correccion de importes"
+git commit -m "Version 3.2 - reset de historial"
 git push
 
-El service worker fue versionado nuevamente para forzar la actualización del código en la PWA.
+Después de que GitHub Pages actualice, cerrá completamente la PWA y volvé a abrirla.
+V3.2 mostrará saldo/historial en cero una vez, manteniendo tus datos de configuración.
