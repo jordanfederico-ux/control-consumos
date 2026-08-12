@@ -1,4 +1,4 @@
-const APP_VERSION="4.2";
+const APP_VERSION="4.2.1";
 const LEGACY_KEY="cc_v1";
 const GLOBAL_KEY="cc_v4_global";
 const FIXED_CLIENT_ID="1008229627670-snds8nh12cesb8htda7s38oi73uck9qj.apps.googleusercontent.com";
@@ -8,7 +8,7 @@ const defaults={
   initial:50000,sender:"",subject:"",clientId:"",
   movements:[],processedIds:[],trackingStart:null,
   alertThreshold:10000,lastAlertMovementId:null,lastSyncAt:null,
-  autoSync:true,faceIdEnabled:false,faceCredentialId:null,schemaVersion:4.2
+  autoSync:true,faceIdEnabled:false,faceCredentialId:null,schemaVersion:4.21
 };
 
 let currentEmail=null,accessToken=null,accessTokenExpiresAt=0,tokenClient=null,syncing=false;
@@ -18,7 +18,7 @@ const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat("es-UY",{style:"currency",currency:"UYU",minimumFractionDigits:2}).format(Number(n)||0);
 
 function globalConfig(){return {clientId:FIXED_CLIENT_ID}}
-function saveGlobalClientId(clientId){}))}
+function saveGlobalClientId(clientId){}
 function userKey(email){return `cc_v4_user_${String(email).toLowerCase()}`}
 function loadUserState(email){
   const key=userKey(email),existing=localStorage.getItem(key);
@@ -27,7 +27,7 @@ function loadUserState(email){
   }else{
     let migrated={};
     try{migrated=JSON.parse(localStorage.getItem(LEGACY_KEY)||"{}")}catch(e){}
-    state={...defaults,...migrated,schemaVersion:4.2};
+    state={...defaults,...migrated,schemaVersion:4.21};
     const g=globalConfig();
     state.clientId=FIXED_CLIENT_ID;
     localStorage.setItem(key,JSON.stringify(state));
@@ -37,7 +37,7 @@ function loadUserState(email){
   if(typeof state.autoSync!=="boolean") state.autoSync=true;
   if(typeof state.faceIdEnabled!=="boolean") state.faceIdEnabled=false;
   if(!("faceCredentialId" in state)) state.faceCredentialId=null;
-  state.schemaVersion=4.2;
+  state.schemaVersion=4.21;
 }
 
 function saveSession(email){
@@ -205,7 +205,7 @@ $("settingsForm").addEventListener("submit",async e=>{
   state.alertThreshold=Number($("alertInput").value)||0;
   state.autoSync=$("autoSyncInput").checked;
   const wantsFaceId=$("faceIdInput").checked;
-  state.schemaVersion=4.2;
+  state.schemaVersion=4.21;
 
   if(wantsFaceId && !state.faceIdEnabled){
     try{
@@ -234,7 +234,7 @@ $("resetTrackingBtn").onclick=e=>{
   state.movements=[];state.processedIds=[];
   state.trackingStart=Date.now();
   state.lastAlertMovementId=null;state.lastSyncAt=null;
-  state.schemaVersion=4.2;
+  state.schemaVersion=4.21;
   save();render();
   setStatus("Historial borrado. El seguimiento empieza desde ahora.");
   $("settings").close();
@@ -301,10 +301,10 @@ function messageText(msg){
 }
 
 async function fetchCurrentGoogleUser(token){
-  const r=await fetch("https://www.googleapis.com/oauth2/v3/userinfo",{headers:{Authorization:"Bearer "+token}});
+  const r=await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile",{headers:{Authorization:"Bearer "+token}});
   const data=await r.json();
-  if(!r.ok||!data.email)throw new Error("No se pudo identificar la cuenta de Google.");
-  return data;
+  if(!r.ok||!data.emailAddress)throw new Error("No se pudo identificar la cuenta de Gmail.");
+  return {email:data.emailAddress};
 }
 
 function getClientId(){return FIXED_CLIENT_ID}
@@ -314,7 +314,7 @@ function initGoogle(){
 
   tokenClient=google.accounts.oauth2.initTokenClient({
     client_id:clientId,
-    scope:"openid email https://www.googleapis.com/auth/gmail.readonly",
+    scope:"https://www.googleapis.com/auth/gmail.readonly",
     prompt:"",
     callback:async resp=>{
       if(resp.error){
@@ -347,7 +347,7 @@ function initGoogle(){
 
 async function authorize({selectAccount=false}={}){
   const clientId=getClientId();
-    initGoogle();
+  initGoogle();
   setGateStatus("Verificando cuenta…");
   tokenClient?.requestAccessToken({prompt:selectAccount?"select_account":""});
 }
@@ -489,7 +489,7 @@ $("logoutFromLockBtn").onclick=()=>{
 window.addEventListener("load",()=>{
   if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(console.warn);
 
-  
+
   const savedEmail=loadSession();
   if(savedEmail){
     currentEmail=savedEmail;
