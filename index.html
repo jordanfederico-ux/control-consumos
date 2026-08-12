@@ -9,13 +9,42 @@
   <title>Control de Consumos</title>
 </head>
 <body>
-  <main class="app">
+  <section id="privateGate" class="gate">
+    <div class="gate-card">
+      <div class="gate-icon">🔒</div>
+      <div class="eyebrow">APLICACIÓN PRIVADA</div>
+      <h1>Control de Consumos</h1>
+      <p id="gateText">Ingresá con una cuenta de Google autorizada para usar esta app.</p>
+      <button id="loginBtn" class="primary">Continuar con Google</button>
+      <div id="gateStatus" class="status"></div>
+      <button id="gateSettingsBtn" class="link-btn">Configurar Client ID</button>
+    </div>
+  </section>
+
+  
+  <section id="deviceLock" class="gate" style="display:none">
+    <div class="gate-card">
+      <div class="gate-icon">🔐</div>
+      <div class="eyebrow">CONTROL DE CONSUMOS</div>
+      <h1>Desbloquear</h1>
+      <p>Usá Face ID o el código del iPhone para abrir la app.</p>
+      <button id="unlockBtn" class="primary">Desbloquear</button>
+      <div id="unlockStatus" class="status"></div>
+      <button id="logoutFromLockBtn" class="link-btn">Usar otra cuenta</button>
+    </div>
+  </section>
+
+  <main id="mainApp" class="app hidden-app">
     <header>
       <div>
         <div class="eyebrow">PERSONAL</div>
         <h1>💳 Control de Consumos</h1>
+        <div id="signedInAs" class="signed-in"></div>
       </div>
-      <button id="settingsBtn" class="icon-btn" aria-label="Configuración">⚙️</button>
+      <div class="header-actions">
+        <button id="switchUserBtn" class="icon-btn" aria-label="Cambiar usuario">👤</button>
+        <button id="settingsBtn" class="icon-btn" aria-label="Configuración">⚙️</button>
+      </div>
     </header>
 
     <section class="balance-card">
@@ -30,7 +59,7 @@
       <div id="status" class="status">Listo.</div>
       <div id="lastUpdate" class="last-update">Última actualización: nunca</div>
       <div id="trackingInfo" class="tracking-info"></div>
-      <div id="versionInfo" class="tracking-info">V3.2</div>
+      <div class="tracking-info">V4.1</div>
     </section>
 
     <section class="history">
@@ -46,39 +75,50 @@
   <dialog id="settings">
     <form method="dialog" id="settingsForm">
       <h2>Configuración</h2>
-
       <label>Saldo inicial (UYU)
         <input id="initialInput" type="number" step="0.01" min="0" placeholder="50000">
       </label>
-
       <label>Remitente
         <input id="senderInput" type="email" placeholder="avisos@banco.com">
       </label>
-
       <label>Texto del asunto (opcional)
         <input id="subjectInput" type="text" placeholder="Aviso de consumo aprobado">
       </label>
-
       <label>Alertar cuando el saldo sea menor a (UYU)
         <input id="alertInput" type="number" step="1" min="0" placeholder="10000">
       </label>
-
       <label class="toggle-row">
         <span>Buscar consumos automáticamente al abrir</span>
         <input id="autoSyncInput" type="checkbox">
       </label>
 
+      <label class="toggle-row">
+        <span>Bloquear con Face ID / código del iPhone</span>
+        <input id="faceIdInput" type="checkbox">
+      </label>
       <label>Google OAuth Client ID
         <input id="clientIdInput" type="text" placeholder="1234567890-xxxxx.apps.googleusercontent.com">
-        <small>No es tu contraseña de Gmail.</small>
+        <small>Es común para todos los usuarios autorizados. No es una contraseña.</small>
       </label>
-
       <button id="notificationBtn" type="button" class="secondary">🔔 Activar alertas del iPhone</button>
       <button id="resetTrackingBtn" type="button" class="danger">🧹 Borrar historial y empezar desde ahora</button>
-
       <div class="dialog-actions">
         <button value="cancel" class="secondary">Cancelar</button>
         <button id="saveBtn" value="default" class="primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="clientDialog">
+    <form method="dialog" id="clientForm">
+      <h2>Conexión con Google</h2>
+      <label>Google OAuth Client ID
+        <input id="gateClientIdInput" type="text" placeholder="1234567890-xxxxx.apps.googleusercontent.com">
+      </label>
+      <small>Solo se necesita configurar una vez en este dispositivo.</small>
+      <div class="dialog-actions">
+        <button value="cancel" class="secondary">Cancelar</button>
+        <button id="saveClientBtn" value="default" class="primary">Guardar</button>
       </div>
     </form>
   </dialog>
