@@ -21,13 +21,15 @@
     <section class="balance-card">
       <div class="label">SALDO DISPONIBLE</div>
       <div id="balance" class="balance">$ 0,00</div>
+      <div id="warning" class="warning hidden"></div>
       <div class="stats">
         <div><span>Inicial</span><strong id="initial">$ 0,00</strong></div>
         <div><span>Consumido</span><strong id="spent">$ 0,00</strong></div>
       </div>
       <button id="refreshBtn" class="primary">🔄 Buscar nuevos consumos</button>
-      <button id="demoBtn" class="secondary">Probar con datos de ejemplo</button>
       <div id="status" class="status">Listo.</div>
+      <div id="lastUpdate" class="last-update">Última actualización: nunca</div>
+      <div id="trackingInfo" class="tracking-info"></div>
     </section>
 
     <section class="history">
@@ -56,10 +58,22 @@
         <input id="subjectInput" type="text" placeholder="Aviso de consumo aprobado">
       </label>
 
+      <label>Alertar cuando el saldo sea menor a (UYU)
+        <input id="alertInput" type="number" step="1" min="0" placeholder="10000">
+      </label>
+
+      <label class="toggle-row">
+        <span>Buscar consumos automáticamente al abrir</span>
+        <input id="autoSyncInput" type="checkbox">
+      </label>
+
       <label>Google OAuth Client ID
         <input id="clientIdInput" type="text" placeholder="1234567890-xxxxx.apps.googleusercontent.com">
-        <small>Se configura una sola vez. No es tu contraseña de Gmail.</small>
+        <small>No es tu contraseña de Gmail.</small>
       </label>
+
+      <button id="notificationBtn" type="button" class="secondary">🔔 Activar alertas del iPhone</button>
+      <button id="resetTrackingBtn" type="button" class="danger">🧹 Borrar historial y empezar desde ahora</button>
 
       <div class="dialog-actions">
         <button value="cancel" class="secondary">Cancelar</button>

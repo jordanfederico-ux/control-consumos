@@ -1,29 +1,44 @@
-# Control de Consumos — V1
+# Control de Consumos — V3.1
 
-Primera versión de una app personal para iPhone que:
-- guarda un saldo inicial;
-- se conecta a Gmail mediante OAuth;
-- busca mails por remitente y asunto;
-- extrae importes en UYU aunque el formato tenga pequeñas variaciones;
-- guarda el ID único de Gmail para no duplicar consumos;
-- muestra saldo, total consumido e historial.
+Esta versión conserva **todo lo de V3** y corrige el parser de importes.
 
-## Importante
-Esta V1 usa `gmail.readonly`: la app solo necesita leer los mensajes. No guarda tu contraseña de Google.
+## Cambios de V3.1
 
-## Para conectar tu Gmail
-1. Crear un proyecto en Google Cloud.
-2. Habilitar Gmail API.
-3. Configurar OAuth consent screen como app externa en modo Testing.
-4. Agregarte como Test User.
-5. Crear un OAuth Client ID de tipo Web application.
-6. Agregar como Authorized JavaScript origin la URL donde publiques esta app.
-7. Copiar el Client ID en Configuración dentro de la app.
+### 1. Solo consumos en UYU
+La app ahora agrega un movimiento únicamente cuando el importe del mail está seguido explícitamente por `UYU`.
 
-Google puede mostrar una pantalla de "app no verificada" durante el desarrollo. Para uso personal esto es compatible con el régimen de apps personales; el límite relevante es de usuarios, no de correos.
+Ejemplos:
+- `Importe: 4071.0 UYU` ✅
+- `Importe: 4.071,50 UYU` ✅
+- `Importe: 120 USD` ❌ se ignora
+- cualquier otra moneda ❌ se ignora
 
-## Publicarla como app en iPhone
-La forma más sencilla de esta primera versión es alojarla en HTTPS (por ejemplo, GitHub Pages) y luego usar "Añadir a pantalla de inicio" en Safari. Después podemos convertirla en una app iOS más nativa si queremos.
+### 2. Corrección de separadores
+El parser distingue entre decimal y miles:
 
-## Próximo paso
-Probar con un correo real de ejemplo y ajustar el parser para las variantes exactas de los avisos del banco.
+- `4071.0 UYU` → `4071,00 UYU`
+- `4071.00 UYU` → `4071,00 UYU`
+- `4.071 UYU` → `4071,00 UYU`
+- `4.071,50 UYU` → `4071,50 UYU`
+- `4071,5 UYU` → `4071,50 UYU`
+
+## Mantiene todo lo anterior
+- Sincronización automática al abrir.
+- Botón manual de actualización.
+- Última actualización.
+- Prevención persistente de duplicados por Gmail ID.
+- “Borrar historial y empezar desde ahora”.
+- Alertas de saldo bajo.
+- Notificaciones PWA.
+- Filtro por remitente y asunto.
+- Extracción del comercio.
+- Configuración guardada localmente.
+
+## Actualizar GitHub
+Reemplazá los archivos actuales por los de este ZIP y ejecutá:
+
+git add .
+git commit -m "Version 3.1 - UYU y correccion de importes"
+git push
+
+El service worker fue versionado nuevamente para forzar la actualización del código en la PWA.
