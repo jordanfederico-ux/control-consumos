@@ -1,4 +1,4 @@
-const APP_VERSION="4.2.1";
+const APP_VERSION="5.1";
 const LEGACY_KEY="cc_v1";
 const GLOBAL_KEY="cc_v4_global";
 const FIXED_CLIENT_ID="1008229627670-snds8nh12cesb8htda7s38oi73uck9qj.apps.googleusercontent.com";
@@ -8,7 +8,7 @@ const defaults={
   initial:50000,sender:"",subject:"",clientId:"",
   movements:[],processedIds:[],trackingStart:null,
   alertThreshold:10000,lastAlertMovementId:null,lastSyncAt:null,
-  autoSync:true,faceIdEnabled:false,faceCredentialId:null,schemaVersion:4.21
+  autoSync:true,installmentPlans:[],faceIdEnabled:false,faceCredentialId:null,schemaVersion:4.21
 };
 
 let currentEmail=null,accessToken=null,accessTokenExpiresAt=0,tokenClient=null,syncing=false;
@@ -34,6 +34,7 @@ function loadUserState(email){
   }
   if(!Array.isArray(state.movements)) state.movements=[];
   if(!Array.isArray(state.processedIds)) state.processedIds=[];
+  if(!Array.isArray(state.installmentPlans)) state.installmentPlans=[];
   if(typeof state.autoSync!=="boolean") state.autoSync=true;
   if(typeof state.faceIdEnabled!=="boolean") state.faceIdEnabled=false;
   if(!("faceCredentialId" in state)) state.faceCredentialId=null;
@@ -138,8 +139,106 @@ function hideDeviceLock(){
   $("deviceLock").style.display="none";
 }
 
+
+let selectedMovementId=null;
+
+function splitIntoInstallments(totalAmount,count){
+  const totalCents=Math.round(Number(totalAmount)*100);
+  const base=Math.floor(totalCents/count);
+  const remainder=totalCents-(base*count);
+  const parts=[];
+  for(let i=0;i<count;i++){
+    const cents=base+(i>=count-remainder?1:0);
+    parts.push(cents/100);
+  }
+  return parts;
+}
+
+function openInstallmentDialog(gmailId){
+  const movement=state.movements.find(m=>m.gmailId===gmailId);
+  if(!movement) return;
+
+  if(movement.installmentPlanId){
+    alert(`Este movimiento ya corresponde a la cuota ${movement.installmentNumber}/${movement.installmentTotal}.`);
+    return;
+  }
+
+  selectedMovementId=gmailId;
+  $("installmentMerchant").textContent=movement.merchant||"Consumo";
+  $("installmentOriginalAmount").textContent=money(movement.amount);
+  $("installmentCountInput").value="";
+  $("installmentPreview").textContent="Elegí la cantidad de cuotas.";
+  $("installmentDialog").showModal();
+}
+
+function previewInstallments(){
+  const movement=state.movements.find(m=>m.gmailId===selectedMovementId);
+  const count=Number($("installmentCountInput").value);
+  if(!movement || !Number.isInteger(count) || count<2){
+    $("installmentPreview").textContent="Elegí la cantidad de cuotas.";
+    return;
+  }
+
+  const parts=splitIntoInstallments(movement.amount,count);
+  $("installmentPreview").textContent=
+    `${count} cuotas: ${parts.map((v,i)=>`${i+1}/${count} ${money(v)}`).join(" · ")}`;
+}
+
+function addNextInstallmentsAfterReset(){
+  if(!Array.isArray(state.installmentPlans)) state.installmentPlans=[];
+  const nextMovements=[];
+
+  for(const plan of state.installmentPlans){
+    if(!plan || plan.completed) continue;
+
+    const nextNumber=Number(plan.currentNumber||1)+1;
+    if(nextNumber>Number(plan.totalInstallments)){
+      plan.completed=true;
+      continue;
+    }
+
+    const amount=Number(plan.installmentAmounts[nextNumber-1]);
+    const id=`installment-${plan.id}-${nextNumber}`;
+
+    nextMovements.push({
+      gmailId:id,
+      amount,
+      merchant:plan.merchant||"Compra en cuotas",
+      date:new Date().toISOString(),
+      installmentPlanId:plan.id,
+      installmentNumber:nextNumber,
+      installmentTotal:plan.totalInstallments,
+      originalAmount:plan.originalAmount,
+      source:"installment"
+    });
+
+    plan.currentNumber=nextNumber;
+    if(nextNumber===Number(plan.totalInstallments)) plan.completed=true;
+  }
+
+  return nextMovements;
+}
+
 function spent(){return state.movements.reduce((s,m)=>s+Number(m.amount),0)}
 function balance(){return Number(state.initial||0)-spent()}
+
+
+function daysUntilCycleEndInclusive(now=new Date()){
+  const y=now.getFullYear();
+  const m=now.getMonth();
+  const d=now.getDate();
+
+  const end = d<=27 ? new Date(y,m,27) : new Date(y,m+1,27);
+  const today = new Date(y,m,d);
+  const diff = Math.round((end-today)/86400000);
+
+  return Math.max(1,diff+1);
+}
+
+function dailyBudget(){
+  const days=daysUntilCycleEndInclusive();
+  return days>0 ? balance()/days : balance();
+}
 
 function render(){
   if(!currentEmail)return;
@@ -148,6 +247,9 @@ function render(){
   $("balance").textContent=money(available);
   $("initial").textContent=money(state.initial);
   $("spent").textContent=money(totalSpent);
+  const daysLeft=daysUntilCycleEndInclusive();
+  $("dailyBudget").textContent=money(dailyBudget());
+  $("daysRemaining").textContent=`${daysLeft} ${daysLeft===1?"día restante":"días restantes"}`;
   $("count").textContent=state.movements.length;
   $("empty").style.display=state.movements.length?"none":"block";
 
@@ -166,11 +268,64 @@ function render(){
     : "Seguimiento sin fecha de inicio configurada";
 
   $("movements").innerHTML=[...state.movements].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(m=>`
-    <div class="movement"><div><div class="merchant">${escapeHtml(m.merchant||"Consumo")}</div>
-    <div class="meta">${new Date(m.date).toLocaleString("es-UY",{dateStyle:"short",timeStyle:"short"})}</div></div>
+    <div class="movement" data-movement-id="${escapeHtml(m.gmailId)}"><div><div class="merchant">${escapeHtml(m.merchant||"Consumo")}</div>
+    <div class="meta">${new Date(m.date).toLocaleString("es-UY",{dateStyle:"short",timeStyle:"short"})}${m.installmentPlanId?` · Cuota ${m.installmentNumber}/${m.installmentTotal}`:""}</div></div>
     <div class="amount">− ${money(m.amount)}</div></div>`).join("");
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+
+$("movements").addEventListener("click",e=>{
+  const row=e.target.closest(".movement");
+  if(!row) return;
+  openInstallmentDialog(row.dataset.movementId);
+});
+
+$("installmentCountInput").addEventListener("input",previewInstallments);
+
+$("installmentForm").addEventListener("submit",e=>{
+  e.preventDefault();
+
+  const movement=state.movements.find(m=>m.gmailId===selectedMovementId);
+  const count=Number($("installmentCountInput").value);
+
+  if(!movement){
+    $("installmentDialog").close();
+    return;
+  }
+
+  if(!Number.isInteger(count) || count<2 || count>60){
+    alert("Ingresá una cantidad de cuotas válida.");
+    return;
+  }
+
+  const originalAmount=Number(movement.amount);
+  const parts=splitIntoInstallments(originalAmount,count);
+  const planId=`plan-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+  state.installmentPlans.push({
+    id:planId,
+    originalGmailId:movement.gmailId,
+    merchant:movement.merchant||"Consumo",
+    originalAmount,
+    totalInstallments:count,
+    installmentAmounts:parts,
+    currentNumber:1,
+    completed:false
+  });
+
+  movement.amount=parts[0];
+  movement.installmentPlanId=planId;
+  movement.installmentNumber=1;
+  movement.installmentTotal=count;
+  movement.originalAmount=originalAmount;
+
+  save();
+  render();
+  $("installmentDialog").close();
+  selectedMovementId=null;
+  setStatus(`Compra marcada en ${count} cuotas.`);
+});
+
 function setStatus(t){$("status").textContent=t}
 function setGateStatus(t){$("gateStatus").textContent=t}
 function showGate(message="Ingresá con una cuenta de Google autorizada para usar esta app."){
@@ -231,12 +386,15 @@ $("settingsForm").addEventListener("submit",async e=>{
 
 $("resetTrackingBtn").onclick=e=>{
   e.preventDefault();
-  state.movements=[];state.processedIds=[];
+  const carriedInstallments=addNextInstallmentsAfterReset();
+  state.movements=carriedInstallments;state.processedIds=[];
   state.trackingStart=Date.now();
   state.lastAlertMovementId=null;state.lastSyncAt=null;
-  state.schemaVersion=4.21;
+  state.schemaVersion=5.0;
   save();render();
-  setStatus("Historial borrado. El seguimiento empieza desde ahora.");
+  setStatus(carriedInstallments.length
+    ? `Historial reiniciado. Se cargaron ${carriedInstallments.length} cuota(s) pendiente(s).`
+    : "Historial borrado. El seguimiento empieza desde ahora.");
   $("settings").close();
 };
 
