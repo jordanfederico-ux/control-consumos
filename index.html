@@ -70,7 +70,7 @@
       <div id="status" class="status">Listo.</div>
       <div id="lastUpdate" class="last-update">Última actualización: nunca</div>
       <div id="trackingInfo" class="tracking-info"></div>
-      <div class="tracking-info">V5.2</div>
+      <div class="tracking-info">V5.3</div>
     </section>
 
     <section class="history">
@@ -115,6 +115,28 @@
       </div>
     </form>
   </dialog>
+
+  <dialog id="installmentDialog">
+    <form method="dialog" id="installmentForm">
+      <h2>Compra en cuotas</h2>
+      <div class="installment-summary">
+        <div id="installmentMerchant" class="installment-merchant">Consumo</div>
+        <div id="installmentOriginalAmount" class="installment-original">$ 0,00</div>
+      </div>
+
+      <label>Cantidad de cuotas
+        <input id="installmentCountInput" type="number" inputmode="numeric" min="2" max="60" step="1" placeholder="3">
+      </label>
+
+      <div id="installmentPreview" class="installment-preview">Elegí la cantidad de cuotas.</div>
+
+      <div class="dialog-actions">
+        <button value="cancel" class="secondary">Cancelar</button>
+        <button id="installmentSaveBtn" value="default" class="primary">Aplicar cuotas</button>
+      </div>
+    </form>
+  </dialog>
+
 <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="app.js"></script>
 </body>

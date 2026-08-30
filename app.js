@@ -1,4 +1,4 @@
-const APP_VERSION="5.2";
+const APP_VERSION="5.3";
 const LEGACY_KEY="cc_v1";
 const GLOBAL_KEY="cc_v4_global";
 const FIXED_CLIENT_ID="1008229627670-snds8nh12cesb8htda7s38oi73uck9qj.apps.googleusercontent.com";
@@ -178,23 +178,31 @@ function openInstallmentDialog(gmailId){
     return;
   }
 
+  const dialog=$("installmentDialog");
+  if(!dialog) return;
+
   selectedMovementId=gmailId;
   $("installmentMerchant").textContent=movement.merchant||"Consumo";
   $("installmentOriginalAmount").textContent=money(movement.amount);
   $("installmentCountInput").value="";
   $("installmentPreview").textContent="Elegí la cantidad de cuotas.";
-  $("installmentDialog").showModal();
+  dialog.showModal();
 }
 
 function previewInstallments(){
   const movement=state.movements.find(m=>m.gmailId===selectedMovementId);
-  const count=Number($("installmentCountInput").value);
+  const input=$("installmentCountInput");
+  const preview=$("installmentPreview");
+  if(!input || !preview) return;
+
+  const count=Number(input.value);
   if(!movement || !Number.isInteger(count) || count<2){
-    $("installmentPreview").textContent="Elegí la cantidad de cuotas.";
+    preview.textContent="Elegí la cantidad de cuotas.";
     return;
   }
+
   const parts=splitIntoInstallments(movement.amount,count);
-  $("installmentPreview").textContent=
+  preview.textContent=
     `${count} cuotas: ${parts.map((v,i)=>`${i+1}/${count} ${money(v)}`).join(" · ")}`;
 }
 
@@ -244,8 +252,10 @@ function render(){
   $("initial").textContent=money(state.initial);
   $("spent").textContent=money(totalSpent);
   const daysLeft=daysUntilCycleEndInclusive();
-  $("dailyBudget").textContent=money(dailyBudget());
-  $("daysRemaining").textContent=`${daysLeft} ${daysLeft===1?"día restante":"días restantes"}`;
+  const dailyEl=$("dailyBudget");
+  const daysEl=$("daysRemaining");
+  if(dailyEl) dailyEl.textContent=money(dailyBudget());
+  if(daysEl) daysEl.textContent=`${daysLeft} ${daysLeft===1?"día restante":"días restantes"}`;
   $("count").textContent=state.movements.length;
   $("empty").style.display=state.movements.length?"none":"block";
 
@@ -270,57 +280,66 @@ function render(){
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 
-$("movements").addEventListener("click",e=>{
-  const row=e.target.closest(".movement");
-  if(!row) return;
-  openInstallmentDialog(row.dataset.movementId);
-});
-
-$("installmentCountInput").addEventListener("input",previewInstallments);
-
-$("installmentForm").addEventListener("submit",e=>{
-  e.preventDefault();
-
-  const movement=state.movements.find(m=>m.gmailId===selectedMovementId);
-  const count=Number($("installmentCountInput").value);
-
-  if(!movement){
-    $("installmentDialog").close();
-    return;
-  }
-
-  if(!Number.isInteger(count) || count<2 || count>60){
-    alert("Ingresá una cantidad de cuotas válida.");
-    return;
-  }
-
-  const originalAmount=Number(movement.amount);
-  const parts=splitIntoInstallments(originalAmount,count);
-  const planId=`plan-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-
-  state.installmentPlans.push({
-    id:planId,
-    originalGmailId:movement.gmailId,
-    merchant:movement.merchant||"Consumo",
-    originalAmount,
-    totalInstallments:count,
-    installmentAmounts:parts,
-    currentNumber:1,
-    completed:false
+const movementsEl=$("movements");
+if(movementsEl){
+  movementsEl.addEventListener("click",e=>{
+    const row=e.target.closest(".movement");
+    if(!row) return;
+    openInstallmentDialog(row.dataset.movementId);
   });
+}
 
-  movement.amount=parts[0];
-  movement.installmentPlanId=planId;
-  movement.installmentNumber=1;
-  movement.installmentTotal=count;
-  movement.originalAmount=originalAmount;
+const installmentCountEl=$("installmentCountInput");
+if(installmentCountEl){
+  installmentCountEl.addEventListener("input",previewInstallments);
+}
 
-  save();
-  render();
-  $("installmentDialog").close();
-  selectedMovementId=null;
-  setStatus(`Compra marcada en ${count} cuotas.`);
-});
+const installmentFormEl=$("installmentForm");
+if(installmentFormEl){
+  installmentFormEl.addEventListener("submit",e=>{
+    e.preventDefault();
+
+    const movement=state.movements.find(m=>m.gmailId===selectedMovementId);
+    const count=Number($("installmentCountInput").value);
+
+    if(!movement){
+      $("installmentDialog").close();
+      return;
+    }
+
+    if(!Number.isInteger(count) || count<2 || count>60){
+      alert("Ingresá una cantidad de cuotas válida.");
+      return;
+    }
+
+    const originalAmount=Number(movement.amount);
+    const parts=splitIntoInstallments(originalAmount,count);
+    const planId=`plan-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+
+    state.installmentPlans.push({
+      id:planId,
+      originalGmailId:movement.gmailId,
+      merchant:movement.merchant||"Consumo",
+      originalAmount,
+      totalInstallments:count,
+      installmentAmounts:parts,
+      currentNumber:1,
+      completed:false
+    });
+
+    movement.amount=parts[0];
+    movement.installmentPlanId=planId;
+    movement.installmentNumber=1;
+    movement.installmentTotal=count;
+    movement.originalAmount=originalAmount;
+
+    save();
+    render();
+    $("installmentDialog").close();
+    selectedMovementId=null;
+    setStatus(`Compra marcada en ${count} cuotas.`);
+  });
+}
 
 function setStatus(t){$("status").textContent=t}
 function setGateStatus(t){$("gateStatus").textContent=t}
@@ -386,7 +405,7 @@ $("resetTrackingBtn").onclick=e=>{
   state.movements=carriedInstallments;state.processedIds=[];
   state.trackingStart=Date.now();
   state.lastAlertMovementId=null;state.lastSyncAt=null;
-  state.schemaVersion=5.0;
+  state.schemaVersion=5.3;
   save();render();
   setStatus(carriedInstallments.length
     ? `Historial reiniciado. Se cargaron ${carriedInstallments.length} cuota(s) pendiente(s).`
