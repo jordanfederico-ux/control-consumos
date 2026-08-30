@@ -1,4 +1,4 @@
-const APP_VERSION="5.1";
+const APP_VERSION="5.2";
 const LEGACY_KEY="cc_v1";
 const GLOBAL_KEY="cc_v4_global";
 const FIXED_CLIENT_ID="1008229627670-snds8nh12cesb8htda7s38oi73uck9qj.apps.googleusercontent.com";
@@ -142,6 +142,21 @@ function hideDeviceLock(){
 
 let selectedMovementId=null;
 
+function daysUntilCycleEndInclusive(now=new Date()){
+  const y=now.getFullYear();
+  const m=now.getMonth();
+  const d=now.getDate();
+  const end=d<=27 ? new Date(y,m,27) : new Date(y,m+1,27);
+  const today=new Date(y,m,d);
+  const diff=Math.round((end-today)/86400000);
+  return Math.max(1,diff+1);
+}
+
+function dailyBudget(){
+  const days=daysUntilCycleEndInclusive();
+  return days>0 ? balance()/days : balance();
+}
+
 function splitIntoInstallments(totalAmount,count){
   const totalCents=Math.round(Number(totalAmount)*100);
   const base=Math.floor(totalCents/count);
@@ -178,7 +193,6 @@ function previewInstallments(){
     $("installmentPreview").textContent="Elegí la cantidad de cuotas.";
     return;
   }
-
   const parts=splitIntoInstallments(movement.amount,count);
   $("installmentPreview").textContent=
     `${count} cuotas: ${parts.map((v,i)=>`${i+1}/${count} ${money(v)}`).join(" · ")}`;
@@ -221,24 +235,6 @@ function addNextInstallmentsAfterReset(){
 
 function spent(){return state.movements.reduce((s,m)=>s+Number(m.amount),0)}
 function balance(){return Number(state.initial||0)-spent()}
-
-
-function daysUntilCycleEndInclusive(now=new Date()){
-  const y=now.getFullYear();
-  const m=now.getMonth();
-  const d=now.getDate();
-
-  const end = d<=27 ? new Date(y,m,27) : new Date(y,m+1,27);
-  const today = new Date(y,m,d);
-  const diff = Math.round((end-today)/86400000);
-
-  return Math.max(1,diff+1);
-}
-
-function dailyBudget(){
-  const days=daysUntilCycleEndInclusive();
-  return days>0 ? balance()/days : balance();
-}
 
 function render(){
   if(!currentEmail)return;
